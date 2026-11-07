@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juan Camilo Gil Córdoba · Desarrollador Full Stack</title>
+    <meta name="description" content="Juan Camilo Gil, Ingeniero de Sistemas y desarrollador Full Stack (backend) con más de 4 años de experiencia en Java, Spring Boot, Angular, Oracle PL/SQL, microservicios y DevOps.">
+    <meta name="theme-color" content="#0b0f17">
+    <meta property="og:title" content="Juan Camilo Gil Córdoba · Desarrollador Full Stack">
+    <meta property="og:description" content="Java · Spring Boot · Angular · Oracle">
+    <meta property="og:type" content="website">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">Saltar al contenido</a>
+
+    <header class="site-header">
+        <div class="container header-inner">
+            <a class="brand" href="#hero" aria-label="Inicio">jcg<span>_</span></a>
+            <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav">
+                <span></span><span></span><span></span>
+            </button>
+            <nav id="nav" class="nav" aria-label="Principal">
+                <a href="#about">Sobre mí</a>
+                <a href="#experience">Experiencia</a>
+                <a href="#skills">Skills</a>
+                <a href="#projects">Proyectos</a>
+                <a href="#education">Educación</a>
+                <a href="#courses">Cursos</a>
+                <a href="#contact">Contacto</a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="main">
+        <section id="hero" class="hero">
+            <div class="container">
+                <p class="prompt">&gt; hola, soy</p>
+                <h1 id="hero-name"></h1>
+                <p class="hero-role" id="hero-role"></p>
+                <p class="hero-meta" id="hero-meta"></p>
+                <div class="cta" id="hero-cta"></div>
+            </div>
+        </section>
+
+        <section id="about" class="section reveal">
+            <div class="container">
+                <h2><span class="idx">01.</span> Sobre mí</h2>
+                <div id="about-body" class="about-body"></div>
+            </div>
+        </section>
+
+        <section id="experience" class="section reveal">
+            <div class="container">
+                <h2><span class="idx">02.</span> Experiencia</h2>
+                <ol id="timeline" class="timeline"></ol>
+            </div>
+        </section>
+
+        <section id="skills" class="section reveal">
+            <div class="container">
+                <h2><span class="idx">03.</span> Skills</h2>
+                <div id="skills-grid" class="skills-grid"></div>
+            </div>
+        </section>
+
+        <section id="projects" class="section reveal">
+            <div class="container">
+                <h2><span class="idx">04.</span> Proyectos</h2>
+                <div id="projects-grid" class="cards"></div>
+            </div>
+        </section>
+
+        <section id="education" class="section reveal">
+            <div class="container">
+                <h2><span class="idx">05.</span> Educación</h2>
+                <div id="education-list" class="cards"></div>
+            </div>
+        </section>
+
+        <section id="courses" class="section reveal">
+            <div class="container">
+                <h2><span class="idx">06.</span> Cursos y masterclass</h2>
+                <ol id="courses-list" class="timeline"></ol>
+            </div>
+        </section>
+
+        <section id="more" class="section reveal">
+            <div class="container">
+                <h2><span class="idx">07.</span> Más sobre mí</h2>
+                <div class="cards">
+                    <article class="card">
+                        <h3>Idiomas</h3>
+                        <ul id="languages-list" class="lang-list"></ul>
+                    </article>
+                    <article class="card">
+                        <h3>Pasatiempos</h3>
+                        <div id="hobbies-list" class="chips"></div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="section reveal">
+            <div class="container contact">
+                <h2><span class="idx">08.</span> Contacto</h2>
+                <p>¿Hablamos? Escríbeme o conectemos en redes.</p>
+                <div class="cta" id="contact-cta"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>© <span id="year"></span> Juan Camilo Gil Córdoba</p>
+        </div>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
