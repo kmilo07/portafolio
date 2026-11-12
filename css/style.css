@@ -44,7 +44,8 @@ ul, ol { list-style: none; }
     border-bottom: 1px solid var(--border);
 }
 .header-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-.brand { font-family: var(--mono); font-weight: 500; font-size: 1.2rem; }
+.brand { display: inline-flex; align-items: center; gap: .6rem; font-family: var(--mono); font-weight: 500; font-size: 1.2rem; }
+.brand-logo { flex: none; display: block; border-radius: 8px; }
 .brand span { color: var(--accent); }
 
 .nav { display: flex; gap: 28px; }
