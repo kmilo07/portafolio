@@ -44,9 +44,10 @@ ul, ol { list-style: none; }
     border-bottom: 1px solid var(--border);
 }
 .header-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-.brand { display: inline-flex; align-items: center; gap: .6rem; font-family: var(--mono); font-weight: 500; font-size: 1.2rem; }
+.brand { display: inline-flex; align-items: center; gap: .6rem; line-height: 1; font-family: var(--mono); font-weight: 500; font-size: 1.2rem; }
 .brand-logo { flex: none; display: block; border-radius: 8px; }
-.brand span { color: var(--accent); }
+.brand-text { display: inline-flex; align-items: center; color: var(--text, inherit); }
+.brand-text > span { color: var(--accent); }
 
 .nav { display: flex; gap: 28px; }
 .nav a { font-size: 0.9rem; color: var(--muted); transition: color 0.2s; }
