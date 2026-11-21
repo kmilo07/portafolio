@@ -78,14 +78,14 @@ const PORTFOLIO = {
       period: "nov. 2023",
       description: "Sitio web.",
       tags: ["Web"],
-      url: "" // TODO: pon el enlace si está publicado
+      url: "https://redhousefurniture2023.com/"
     },
     {
       title: "World Transport Solutions",
       period: "dic. 2023",
       description: "Sitio web.",
       tags: ["Web"],
-      url: ""
+      url: "https://www.worldtransolutions.com/"
     },
     {
       title: "Rainbow Glamping",
