@@ -97,8 +97,8 @@ const PORTFOLIO = {
     {
       title: "Sistema logístico",
       period: "En desarrollo",
-      description: "Sistema logístico.",
-      tags: ["Web", "Logística"],
+      description: "Software para empresas de comercio: gestión de personal, documentación y otros procesos operativos.",
+      tags: ["Web", "Java", "Angular"],
       url: ""
     }
   ],
