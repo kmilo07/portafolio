@@ -1,151 +1,79 @@
-(function () {
-    const d = PORTFOLIO;
-    const $ = (id) => document.getElementById(id);
+// Punto de entrada. Contenido (siempre) -> escena 3D + scroll (si WebGL y librerías funcionan).
+import { renderContent, initNav, createHud } from "./ui.js";
 
-    const esc = (s) =>
-        String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const data = PORTFOLIO; // global definido por js/data.js
+const root = document.documentElement;
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // Hero
-    const years = new Date().getFullYear() - d.careerStart;
-    $("hero-name").textContent = d.name;
-    $("hero-role").textContent = `${d.role} · ${d.headline}`;
-    $("hero-meta").textContent = `${d.location} · +${years} años de experiencia`;
+function useFallback(reason) {
+    console.warn("[portafolio] Modo HTML sin 3D:", reason);
+    root.classList.remove("is-loading", "has-3d");
+    root.classList.add("no-3d");
+}
 
-    const links = [];
-    if (d.contact.linkedin) links.push({ label: "LinkedIn", href: d.contact.linkedin });
-    if (d.contact.github) links.push({ label: "GitHub", href: d.contact.github });
+// 1) El contenido HTML siempre se pinta: es la versión de respaldo y las secciones finales.
+renderContent(data);
+initNav();
 
-    const linkBtns = links
-        .map((l) => `<a class="btn" href="${esc(l.href)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a>`)
-        .join("");
+// 2) Intenta levantar la experiencia 3D.
+async function start3D() {
+    if (!window.gsap || !window.ScrollTrigger) throw new Error("GSAP/ScrollTrigger no cargaron");
+    const probe = document.createElement("canvas");
+    if (!(probe.getContext("webgl2") || probe.getContext("webgl"))) throw new Error("WebGL no disponible");
 
-    $("hero-cta").innerHTML = `<a class="btn primary" href="#experience">Ver experiencia</a>${linkBtns}`;
-    $("contact-cta").innerHTML = linkBtns || "<p>Agrega tus enlaces en js/data.js</p>";
+    const { createScene } = await import("./scene.js");
+    const { createScroll } = await import("./scroll.js");
+    const { loadModels } = await import("./models.js");
 
-    // About
-    $("about-body").innerHTML = d.about.map((p) => `<p>${esc(p)}</p>`).join("");
+    const sceneApi = createScene(document.getElementById("scene"), { projects: data.projects, reducedMotion });
+    sceneApi.paused = false;
 
-    // Experience
-    $("timeline").innerHTML = d.experience
-        .map(
-            (e) => `
-        <li class="tl-item${e.current ? " current" : ""}">
-            <article class="tl-card">
-                <h3>${esc(e.role)} <span class="at">@ ${esc(e.company)}</span></h3>
-                <p class="tl-meta">${esc(e.period)} · ${esc(e.type)} · ${esc(e.location)}</p>
-                ${
-                    e.levels
-                        ? `<ul class="levels">${e.levels
-                              .map((l) => `<li><strong>${esc(l.title)}</strong> <span>${esc(l.period)}</span></li>`)
-                              .join("")}</ul>`
-                        : ""
-                }
-                <ul>${e.bullets.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>
-            </article>
-        </li>`
-        )
-        .join("");
+    const hud = createHud(data, { onSelectProject: (i) => scroll.goTo(`project${i}`) });
+    const scroll = createScroll(sceneApi, { reducedMotion });
+    hud.setProject(0);
 
-    // Skills
-    $("skills-grid").innerHTML = Object.entries(d.skills)
-        .map(
-            ([group, items]) => `
-        <div class="skill-group">
-            <h3>${esc(group)}</h3>
-            <div class="chips">${items.map((s) => `<span class="chip">${esc(s)}</span>`).join("")}</div>
-        </div>`
-        )
-        .join("");
-
-    // Projects
-    $("projects-grid").innerHTML = d.projects
-        .map((p) => {
-            const inner = `
-            <h3>${esc(p.title)}</h3>
-            ${p.period ? `<p class="period">${esc(p.period)}</p>` : ""}
-            <p>${esc(p.description)}</p>
-            <div class="chips">${p.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div>`;
-            return p.url
-                ? `<a class="card link" href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${inner}</a>`
-                : `<article class="card">${inner}</article>`;
-        })
-        .join("");
-
-    // Education
-    $("education-list").innerHTML = d.education
-        .map(
-            (e) => `
-        <article class="card">
-            <h3>${esc(e.school)}</h3>
-            <p>${esc(e.degree)}</p>
-            <p class="period">${esc(e.period)}</p>
-        </article>`
-        )
-        .join("");
-
-    // Courses
-    $("courses-list").innerHTML = d.courses
-        .map(
-            (c) => `
-        <li class="tl-item">
-            <article class="tl-card">
-                <h3>${esc(c.title)}</h3>
-                <p class="tl-meta">${esc(c.provider)} · ${esc(c.date)}</p>
-            </article>
-        </li>`
-        )
-        .join("");
-
-    // Languages + hobbies
-    $("languages-list").innerHTML = d.languages
-        .map((l) => `<li><span>${esc(l.name)}</span><span class="level">${esc(l.level)}</span></li>`)
-        .join("");
-    $("hobbies-list").innerHTML = d.hobbies.map((h) => `<span class="chip">${esc(h)}</span>`).join("");
-
-    // Aviso en consola de TODOs pendientes
-    const pending = JSON.stringify(d).match(/TODO[^"]*/g);
-    if (pending) console.info(`Portafolio: ${pending.length} TODO pendientes en js/data.js`, pending);
-
-    // Footer
-    $("year").textContent = new Date().getFullYear();
-
-    // Menú móvil
-    const toggle = document.querySelector(".nav-toggle");
-    const nav = $("nav");
-    toggle.addEventListener("click", () => {
-        const open = nav.classList.toggle("open");
-        toggle.setAttribute("aria-expanded", open);
+    // Anclas: "Proyectos" y el cue "Desliza" navegan dentro del timeline.
+    document.addEventListener("click", (e) => {
+        const a = e.target.closest('a[href="#projects"], [data-goto]');
+        if (!a) return;
+        e.preventDefault();
+        scroll.goTo(a.dataset.goto || "projects");
     });
-    nav.addEventListener("click", (e) => {
-        if (e.target.tagName === "A") {
-            nav.classList.remove("open");
-            toggle.setAttribute("aria-expanded", "false");
+    if (location.hash === "#projects") setTimeout(() => scroll.goTo("projects"), 50);
+
+    // Si se pierde el contexto WebGL, vuelve a la versión HTML.
+    sceneApi.renderer.domElement.addEventListener("webglcontextlost", (e) => {
+        e.preventDefault();
+        sceneApi.paused = true;
+        useFallback("contexto WebGL perdido");
+    });
+
+    // Bucle: el ticker de GSAP va en sincronía con el scroll suavizado.
+    let lastPhase = "";
+    window.gsap.ticker.add((time, deltaMs) => {
+        if (sceneApi.paused) return;
+        sceneApi.update(time, Math.min(deltaMs, 100) / 1000);
+        if (!reducedMotion || sceneApi.dirty) sceneApi.render();
+
+        const phase = scroll.phaseAt(scroll.tl.time());
+        if (phase !== lastPhase) {
+            lastPhase = phase;
+            hud.setPhase(phase);
         }
+        hud.setProject(scroll.projectIndex());
     });
 
-    // Reveal + link activo
-    const reveals = document.querySelectorAll(".reveal");
-    const links2 = document.querySelectorAll(".nav a");
+    // Modelos .glb opcionales (no hace nada si no hay urls en js/models.js).
+    loadModels(sceneApi);
 
-    if (!("IntersectionObserver" in window)) {
-        reveals.forEach((r) => r.classList.add("visible"));
-        return;
-    }
+    root.classList.remove("is-loading");
+    root.classList.add("has-3d");
+    window.ScrollTrigger.refresh();
+    // Expuesto para depuración desde la consola
+    window.__scene = { sceneApi, scroll };
+}
 
-    const revealObs = new IntersectionObserver(
-        (entries) => entries.forEach((en) => en.isIntersecting && (en.target.classList.add("visible"), revealObs.unobserve(en.target))),
-        { threshold: 0.1 }
-    );
-    reveals.forEach((r) => revealObs.observe(r));
-
-    const activeObs = new IntersectionObserver(
-        (entries) =>
-            entries.forEach((en) => {
-                if (en.isIntersecting) {
-                    links2.forEach((a) => a.classList.toggle("active", a.getAttribute("href") === `#${en.target.id}`));
-                }
-            }),
-        { rootMargin: "-40% 0px -55% 0px" }
-    );
-    document.querySelectorAll("main section[id]").forEach((s) => activeObs.observe(s));
-})();
+const failSafe = setTimeout(() => root.classList.contains("is-loading") && useFallback("tiempo de espera"), 10000);
+start3D()
+    .catch((err) => useFallback(err && err.message ? err.message : err))
+    .finally(() => clearTimeout(failSafe));
