@@ -67,9 +67,7 @@ async function start3D() {
     const hint = document.getElementById("scroll-hint");
     const content = document.getElementById("content");
     const updateHint = () => hint.classList.toggle("hide", content.getBoundingClientRect().top < window.innerHeight * 0.6);
-    hint.addEventListener("click", () =>
-        window.scrollBy({ top: window.innerHeight * 0.6, behavior: reducedMotion ? "auto" : "smooth" })
-    );
+    hint.addEventListener("click", () => scroll.next());
     window.addEventListener("scroll", updateHint, { passive: true });
     updateHint();
 
