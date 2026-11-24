@@ -49,12 +49,24 @@ export function createScroll(api, { reducedMotion = false, onUpdate } = {}) {
             {
                 keyframes: [
                     { y: m.desk.pos.y + 0.9, duration: 0.9, ease: "power2.out" },
-                    { x: m.ring.pos.x, y: m.ring.pos.y, z: m.ring.pos.z, duration: T.detachDur - 0.9, ease: "power2.inOut" }
+                    { x: m.ring.pos.x, y: m.ring.pos.y, z: m.ring.pos.z, duration: T.detachDur - 0.9, ease: "power3.inOut" }
                 ]
             },
             at
         );
-        tl.to(m.obj.rotation, { y: m.ring.rotY + TAU, duration: T.detachDur, ease: "power2.inOut" }, at);
+        tl.to(m.obj.rotation, { y: m.ring.rotY + TAU, duration: T.detachDur, ease: "power3.inOut" }, at);
+        // inclinación sutil mientras flota (inercia al despegar); vuelve a quedar recto
+        const lean = (i % 2 ? 1 : -1) * 0.06;
+        tl.to(
+            m.obj.rotation,
+            {
+                keyframes: [
+                    { x: -0.07, z: lean, duration: 0.7, ease: "sine.out" },
+                    { x: 0, z: 0, duration: T.detachDur - 0.7, ease: "sine.inOut" }
+                ]
+            },
+            at
+        );
         tl.to(m.obj.scale, { x: ring.scale, y: ring.scale, z: ring.scale, duration: T.detachDur, ease: "power2.inOut" }, at);
         // los soportes se esconden
         tl.to(m.stand.scale, { x: 0.001, y: 0.001, z: 0.001, duration: 0.6, ease: "back.in(1.5)" }, at);
@@ -72,7 +84,7 @@ export function createScroll(api, { reducedMotion = false, onUpdate } = {}) {
         if (k < N - 1) {
             tl.to(
                 carousel.rotation,
-                { y: (-(k + 1) * TAU) / N, duration: T.turn, ease: "power2.inOut" },
+                { y: (-(k + 1) * TAU) / N, duration: T.turn, ease: "power3.inOut" },
                 T.projects + k * T.step + T.hold
             );
         }
@@ -141,9 +153,18 @@ export function createScroll(api, { reducedMotion = false, onUpdate } = {}) {
         next() {
             const stops = [T.aboutIn + 0.4, ...Array.from({ length: N }, (_, k) => labelTime(`project${k}`)), D];
             const now = tl.time();
-            const time = stops.find((t) => t > now + 0.25) ?? D;
+            const time = stops.find((t) => t > now + 0.25 && t < D) ?? D;
+            const behavior = reducedMotion ? "auto" : "smooth";
+            // Última parada del timeline (o ya pasada): salta a la sección Experiencia.
+            if (time >= D) {
+                const exp = document.getElementById("experience");
+                if (exp) {
+                    window.scrollTo({ top: exp.getBoundingClientRect().top + window.scrollY - 40, behavior });
+                    return;
+                }
+            }
             const y = st.start + (time / D) * (st.end - st.start);
-            window.scrollTo({ top: y, behavior: reducedMotion ? "auto" : "smooth" });
+            window.scrollTo({ top: y, behavior });
         },
         // Lleva el scroll hasta una etiqueta del timeline ("about", "projects", "project2"…)
         goTo(name) {

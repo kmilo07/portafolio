@@ -2,6 +2,8 @@
 // No sabe nada del scroll: expone `state` (valores que anima js/scroll.js)
 // y métodos update/render/resize.
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { createScreenCanvas, drawProjectScreen } from "./mockups.js";
 
 const TAU = Math.PI * 2;
@@ -26,17 +28,19 @@ function cssColor(name, fallback) {
 }
 
 const std = (color, o = {}) =>
-    new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0.05, flatShading: true, ...o });
+    new THREE.MeshStandardMaterial({ color, roughness: 0.78, metalness: 0.04, ...o });
 
 function box(w, h, d, mat, { cast = true, receive = false } = {}) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    // bordes biselados: atrapan la luz y quitan el aspecto de "caja" puro
+    const r = Math.min(0.014, Math.min(w, h, d) * 0.32);
+    const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, r), mat);
     m.castShadow = cast;
     m.receiveShadow = receive;
     return m;
 }
 
 function cyl(rt, rb, h, seg, mat, { cast = true } = {}) {
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, Math.max(seg, 24)), mat);
     m.castShadow = cast;
     return m;
 }
@@ -62,11 +66,19 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
+    renderer.toneMappingExposure = 1.1;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(BG);
     scene.fog = new THREE.Fog(BG, 8, 22);
+    // reflejos sutiles de estudio (muy bajos) para que metales y plásticos se sientan reales
+    {
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+        scene.environmentIntensity = 0.22;
+        pmrem.dispose();
+    }
 
     const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 80);
 
@@ -84,10 +96,11 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
 
     const lampLight = new THREE.SpotLight(LAMP, 90, 0, 1.0, 0.85, 1.6);
     lampLight.castShadow = true; // única fuente con sombras
-    lampLight.shadow.mapSize.set(1024, 1024);
+    lampLight.shadow.mapSize.set(2048, 2048);
+    lampLight.shadow.radius = 5;
     lampLight.shadow.camera.near = 0.3;
     lampLight.shadow.camera.far = 9;
-    lampLight.shadow.bias = -0.0004;
+    lampLight.shadow.bias = -0.0003;
     lampLight.shadow.normalBias = 0.03;
     scene.add(lampLight, lampLight.target);
 
@@ -100,12 +113,12 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
     scene.add(ledLight);
 
     // ---------- Suelo ----------
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(16, 64), std(0x111726, { roughness: 1, flatShading: false }));
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(16, 64), std(0x111726, { roughness: 0.92, metalness: 0.1 }));
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     scene.add(floor);
 
-    const rug = new THREE.Mesh(new THREE.CircleGeometry(2.7, 48), std(0x1a2236, { roughness: 1, flatShading: false }));
+    const rug = new THREE.Mesh(new THREE.CircleGeometry(2.7, 48), std(0x1a2236, { roughness: 1 }));
     rug.rotation.x = -Math.PI / 2;
     rug.position.set(0, 0.005, 0.5);
     rug.receiveShadow = true;
@@ -119,6 +132,7 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
     scene.add(parts.furniture, parts.character);
 
     // ---------- Escritorio ----------
+    let chairRef = null;
     const deskW = Math.max(4.8, projects.length * 0.94 + 1.4);
     {
         const wood = std(0x3b2f2a);
@@ -156,11 +170,12 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
             const a = (i / 5) * TAU;
             leg.position.set(Math.cos(a) * 0.17, 0.1, Math.sin(a) * 0.17);
             leg.rotation.y = -a;
-            const wheel = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 5), metal);
+            const wheel = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 10), metal);
             wheel.position.set(Math.cos(a) * 0.34, 0.05, Math.sin(a) * 0.34);
             chair.add(leg, wheel);
         }
         parts.furniture.add(chair);
+        chairRef = chair;
     }
 
     // ---------- Torre de PC con LED ----------
@@ -182,7 +197,7 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
         for (let i = 0; i < 3; i++) {
             const m = new THREE.MeshBasicMaterial({ color: ACCENT, toneMapped: false });
             led.mats.push(m);
-            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.012, 6, 16), m);
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.012, 8, 32), m);
             ring.rotation.y = Math.PI / 2;
             ring.position.set(0.15, 0.12 + i * 0.17, 0.06);
             g.add(ring);
@@ -209,19 +224,19 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
         const p0 = new THREE.Vector3(0, 0.04, 0);
         const p1 = new THREE.Vector3(0.08, 0.58, 0);
         const p2 = new THREE.Vector3(0.4, 0.74, 0);
-        const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), metal);
+        const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 12), metal);
         elbow.position.copy(p1);
         g.add(base, rod(p0, p1, 0.014, metal), elbow, rod(p1, p2, 0.014, metal));
 
         const head = new THREE.Group();
         head.position.copy(p2);
-        const shadeGeo = new THREE.CylinderGeometry(0.05, 0.14, 0.2, 12, 1, true);
+        const shadeGeo = new THREE.CylinderGeometry(0.05, 0.14, 0.2, 32, 1, true);
         shadeGeo.rotateX(Math.PI / 2); // eje a lo largo de +Z
         shadeGeo.translate(0, 0, 0.08);
-        const shade = new THREE.Mesh(shadeGeo, std(ACCENT, { side: THREE.DoubleSide, flatShading: false }));
+        const shade = new THREE.Mesh(shadeGeo, std(ACCENT, { side: THREE.DoubleSide }));
         shade.castShadow = false;
         const bulb = new THREE.Mesh(
-            new THREE.SphereGeometry(0.045, 10, 8),
+            new THREE.SphereGeometry(0.045, 20, 14),
             new THREE.MeshBasicMaterial({ color: 0xffd9a8, toneMapped: false })
         );
         bulb.position.z = 0.1;
@@ -271,12 +286,12 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
 
         const mug = new THREE.Group();
         mug.position.set(0.95, DESK_Y, 0.22);
-        const cup = cyl(0.05, 0.045, 0.1, 10, std(ACCENT, { flatShading: false }));
+        const cup = cyl(0.05, 0.045, 0.1, 10, std(ACCENT));
         cup.position.y = 0.05;
         const coffee = new THREE.Mesh(new THREE.CircleGeometry(0.043, 10), std(0x2a1a12));
         coffee.rotation.x = -Math.PI / 2;
         coffee.position.y = 0.092;
-        const handle = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.009, 5, 8, Math.PI), std(ACCENT, { flatShading: false }));
+        const handle = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.009, 5, 8, Math.PI), std(ACCENT));
         handle.position.set(0.052, 0.05, 0);
         handle.rotation.z = -Math.PI / 2;
         handle.castShadow = true;
@@ -285,7 +300,7 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
     }
 
     // ---------- Personaje (low-poly) ----------
-    const typing = { enabled: true, L: null, R: null, head: null, torso: null };
+    const typing = { enabled: true, L: null, R: null, head: null, torso: null, eyes: [], nextBlink: 2.5, blink: -1 };
     {
         const skin = std(0xe3ab8a);
         const hoodie = std(0x3b4566);
@@ -324,9 +339,9 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
         const head = new THREE.Group();
         head.position.y = 0.76;
         torso.add(head);
-        const skull = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 6), skin);
+        const skull = new THREE.Mesh(new THREE.SphereGeometry(0.15, 28, 20), skin);
         skull.castShadow = true;
-        const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.162, 8, 6, 0, TAU, 0, Math.PI * 0.58), hair);
+        const hairCap = new THREE.Mesh(new THREE.SphereGeometry(0.162, 28, 20, 0, TAU, 0, Math.PI * 0.58), hair);
         hairCap.rotation.x = -0.35;
         hairCap.position.set(0, 0.015, 0.012);
         hairCap.castShadow = true;
@@ -339,7 +354,7 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
         eyeR.position.x = 0.05;
         // auriculares
         const hp = std(0x252c44);
-        const band = new THREE.Mesh(new THREE.TorusGeometry(0.175, 0.016, 6, 14, Math.PI), hp);
+        const band = new THREE.Mesh(new THREE.TorusGeometry(0.175, 0.016, 10, 32, Math.PI), hp);
         band.rotation.z = 0;
         band.rotation.y = Math.PI / 2;
         band.position.y = 0.0;
@@ -376,6 +391,55 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
         typing.R = makeArm(1);
         typing.head = head;
         typing.torso = torso;
+        typing.eyes = [eyeL, eyeR];
+    }
+
+    // ---------- Sombras de contacto falsas (blobs suaves) y vapor de la taza ----------
+    const blobTex = (() => {
+        const c = document.createElement("canvas");
+        c.width = c.height = 128;
+        const x = c.getContext("2d");
+        const g = x.createRadialGradient(64, 64, 4, 64, 64, 62);
+        g.addColorStop(0, "rgba(0,0,0,0.55)");
+        g.addColorStop(0.6, "rgba(0,0,0,0.18)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        x.fillStyle = g;
+        x.fillRect(0, 0, 128, 128);
+        const t = new THREE.CanvasTexture(c);
+        t.colorSpace = THREE.SRGBColorSpace;
+        return t;
+    })();
+    const blob = (w, d, x, y, z, o = 1) => {
+        const m = new THREE.Mesh(
+            new THREE.PlaneGeometry(w, d),
+            new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, opacity: o, depthWrite: false })
+        );
+        m.rotation.x = -Math.PI / 2;
+        m.position.set(x, y, z);
+        m.renderOrder = 1;
+        scene.add(m);
+    };
+    blob(deskW + 0.5, 1.7, 0, 0.012, 0, 0.75); // bajo el escritorio
+    blob(1.0, 1.0, 0, 0.012, 0.9, 0.7); // silla + personaje
+    
+    const steam = [];
+    {
+        const sc = document.createElement("canvas");
+        sc.width = sc.height = 64;
+        const x = sc.getContext("2d");
+        const g = x.createRadialGradient(32, 32, 0, 32, 32, 30);
+        g.addColorStop(0, "rgba(255,255,255,0.5)");
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        x.fillStyle = g;
+        x.fillRect(0, 0, 64, 64);
+        const st = new THREE.CanvasTexture(sc);
+        for (let i = 0; i < 5; i++) {
+            const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: st, transparent: true, depthWrite: false, opacity: 0 }));
+            sp.userData.off = i / 5;
+            sp.userData.seed = i * 1.9;
+            scene.add(sp);
+            steam.push(sp);
+        }
     }
 
     // ---------- Monitores ----------
@@ -387,8 +451,24 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
 
     const maxAniso = renderer.capabilities.getMaxAnisotropy();
     const theme = { accent: ACCENT, bg: BG };
-    const bezelMat = std(0x0e121d, { roughness: 0.4, metalness: 0.4 });
+    const bezelMat = std(0x0e121d, { roughness: 0.32, metalness: 0.55 });
     const standMat = std(0x1c2233, { metalness: 0.5 });
+    const sheenMat = (() => {
+        const c = document.createElement("canvas");
+        c.width = 256;
+        c.height = 144;
+        const x = c.getContext("2d");
+        const g = x.createLinearGradient(0, 0, 256, 144);
+        g.addColorStop(0, "rgba(255,255,255,0.10)");
+        g.addColorStop(0.38, "rgba(255,255,255,0.02)");
+        g.addColorStop(0.62, "rgba(255,255,255,0)");
+        g.addColorStop(1, "rgba(255,255,255,0.04)");
+        x.fillStyle = g;
+        x.fillRect(0, 0, 256, 144);
+        const t = new THREE.CanvasTexture(c);
+        t.colorSpace = THREE.SRGBColorSpace;
+        return new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false });
+    })();
     const monitors = [];
     const N = projects.length;
     const spacing = 0.94;
@@ -410,6 +490,10 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
         const screen = new THREE.Mesh(new THREE.PlaneGeometry(MON_W, MON_H), screenMat);
         screen.position.z = 0.021;
 
+        // reflejo de cristal muy tenue en diagonal
+        const sheen = new THREE.Mesh(new THREE.PlaneGeometry(MON_W, MON_H), sheenMat);
+        sheen.position.z = 0.0225;
+
         const stand = new THREE.Group();
         stand.position.y = -(MON_H / 2 + 0.03);
         const neck = box(0.05, 0.26, 0.03, standMat);
@@ -417,7 +501,7 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
         const foot = box(0.3, 0.015, 0.2, standMat);
         foot.position.set(0, -0.2575, -0.02);
         stand.add(neck, foot);
-        inner.add(bezel, screen, stand);
+        inner.add(bezel, screen, sheen, stand);
 
         // posición sobre el escritorio (arco suave hacia el personaje)
         const c = i - (N - 1) / 2;
@@ -484,10 +568,25 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
             : { x: s.hero * 0.15 + s.about * 0.17 - s.proj * 0.16, y: 0 };
     }
 
+    // Parallax mínimo con el puntero (suavizado); apagado con prefers-reduced-motion.
+    const look = { x: 0, y: 0, tx: 0, ty: 0 };
+    if (!reducedMotion) {
+        window.addEventListener(
+            "pointermove",
+            (e) => {
+                look.tx = (e.clientX / window.innerWidth - 0.5) * 2;
+                look.ty = (e.clientY / window.innerHeight - 0.5) * 2;
+            },
+            { passive: true }
+        );
+    }
+
     function updateCamera() {
         const c = state.cam;
         tgt.set(c.tx, c.ty, c.tz);
         pos.set(c.px, c.py, c.pz).sub(tgt).multiplyScalar(camScale).add(tgt);
+        pos.x += look.x * 0.12;
+        pos.y -= look.y * 0.07;
         camera.position.copy(pos);
         camera.lookAt(tgt);
         const sh = layoutShift();
@@ -516,16 +615,42 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
         if (!reducedMotion) {
             if (mixer) mixer.update(dt);
             if (typing.enabled) {
+                // Teclea a ráfagas: ritmo irregular (pausas para "pensar") en vez de una sinusoide constante.
+                const burst = clamp(Math.sin(t * 0.55) * 1.6 + Math.sin(t * 1.37) * 0.8 + 0.35, 0, 1);
                 [typing.L, typing.R].forEach((a, i) => {
                     const ph = i * 2.1;
-                    a.fore.rotation.x = 0.78 + Math.sin(t * 11 + ph) * 0.05;
-                    a.up.rotation.x = 0.95 + Math.sin(t * 5.3 + ph) * 0.018;
-                    a.hand.position.y = -0.32 + Math.sin(t * 13 + ph * 1.7) * 0.006;
+                    const k = Math.max(0, Math.sin(t * (9 + i * 1.7) + ph)) ** 2; // golpe de tecla
+                    a.fore.rotation.x = 0.78 + (Math.sin(t * 3.1 + ph) * 0.02 + k * 0.07) * (0.25 + 0.75 * burst);
+                    a.up.rotation.x = 0.95 + Math.sin(t * 1.9 + ph) * 0.012 + Math.sin(t * 5.3 + ph) * 0.01 * burst;
+                    a.hand.position.y = -0.32 + k * 0.012 * burst;
                 });
-                typing.head.rotation.y = Math.sin(t * 0.45) * 0.14;
-                typing.head.rotation.x = Math.sin(t * 0.9) * 0.02;
-                typing.torso.scale.y = 1 + Math.sin(t * 1.6) * 0.006;
+                // respiración + mirada que recorre las pantallas
+                const gaze = Math.sin(t * 0.32) * 0.2 + Math.sin(t * 0.83) * 0.05;
+                typing.head.rotation.y += (gaze - typing.head.rotation.y) * Math.min(1, dt * 3);
+                typing.head.rotation.x = Math.sin(t * 0.6) * 0.025 + (1 - burst) * -0.02;
+                typing.torso.scale.y = 1 + Math.sin(t * 1.5) * 0.007;
+                typing.torso.rotation.z = Math.sin(t * 0.7) * 0.012;
+                if (chairRef) chairRef.rotation.y = Math.sin(t * 0.38) * 0.025;
+                // parpadeo
+                if (t > typing.nextBlink && typing.blink < 0) typing.blink = t;
+                let lid = 1;
+                if (typing.blink >= 0) {
+                    const p = (t - typing.blink) / 0.16;
+                    lid = p >= 1 ? 1 : 1 - Math.sin(p * Math.PI) * 0.92;
+                    if (p >= 1) {
+                        typing.blink = -1;
+                        typing.nextBlink = t + 2 + Math.random() * 4;
+                    }
+                }
+                typing.eyes.forEach((e) => (e.scale.y = lid));
             }
+            // vapor de la taza
+            steam.forEach((sp) => {
+                const p = (t * 0.16 + sp.userData.off) % 1;
+                sp.position.set(0.95 + Math.sin(t * 0.8 + sp.userData.seed) * 0.02 * p, DESK_Y + 0.12 + p * 0.28, 0.22);
+                sp.scale.setScalar(0.04 + p * 0.1);
+                sp.material.opacity = Math.sin(p * Math.PI) * 0.22;
+            });
             // LED RGB lento y parpadeo mínimo de la lámpara
             led.hue = (t * 0.06) % 1;
             tmpColor.setHSL(led.hue, 0.9, 0.58);
@@ -534,6 +659,8 @@ export function createScene(canvas, { projects, reducedMotion = false }) {
             lampLight.intensity = 90 * (1 + Math.sin(t * 2.3) * 0.012);
         }
 
+        look.x += (look.tx - look.x) * Math.min(1, dt * 2.5);
+        look.y += (look.ty - look.y) * Math.min(1, dt * 2.5);
         updateCamera();
     }
 
