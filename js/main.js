@@ -63,6 +63,14 @@ async function start3D() {
         hud.setProject(scroll.projectIndex());
     });
 
+    // Indicador "Desliza": siempre visible hasta que el contenido sólido cubre el canvas.
+    const hint = document.getElementById("scroll-hint");
+    const content = document.getElementById("content");
+    const updateHint = () => hint.classList.toggle("hide", content.getBoundingClientRect().top < window.innerHeight * 0.6);
+    hint.addEventListener("click", () => scroll.next());
+    window.addEventListener("scroll", updateHint, { passive: true });
+    updateHint();
+
     // Modelos .glb opcionales (no hace nada si no hay urls en js/models.js).
     loadModels(sceneApi);
 

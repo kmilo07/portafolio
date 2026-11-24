@@ -95,10 +95,10 @@ const PORTFOLIO = {
       url: "https://rainbowglamping.com/home"
     },
     {
-      title: "SBR fit",
+      title: "Sistema logístico",
       period: "En desarrollo",
-      description: "Aplicación móvil.",
-      tags: ["Móvil", "Ionic"],
+      description: "Software para empresas de comercio: gestión de personal, documentación y otros procesos operativos.",
+      tags: ["Web", "Java", "Angular"],
       url: ""
     }
   ],

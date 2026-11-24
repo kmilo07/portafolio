@@ -137,6 +137,14 @@ export function createScroll(api, { reducedMotion = false, onUpdate } = {}) {
             const i = Math.round(-carousel.rotation.y / (TAU / N));
             return Math.min(N - 1, Math.max(0, i));
         },
+        // Avanza a la siguiente "parada": Sobre mí -> proyecto 1 -> ... -> proyecto N -> contenido
+        next() {
+            const stops = [T.aboutIn + 0.4, ...Array.from({ length: N }, (_, k) => labelTime(`project${k}`)), D];
+            const now = tl.time();
+            const time = stops.find((t) => t > now + 0.25) ?? D;
+            const y = st.start + (time / D) * (st.end - st.start);
+            window.scrollTo({ top: y, behavior: reducedMotion ? "auto" : "smooth" });
+        },
         // Lleva el scroll hasta una etiqueta del timeline ("about", "projects", "project2"…)
         goTo(name) {
             const label = name === "projects" ? "project0" : name === "about" ? "about" : name;

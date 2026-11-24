@@ -46,6 +46,11 @@
         </div>
     </header>
 
+    <!-- Indicador de scroll siempre visible mientras dura la escena 3D -->
+    <button type="button" class="scroll-hint" id="scroll-hint" aria-label="Desplazar hacia abajo">
+        <span>Desliza</span><span class="arrow" aria-hidden="true">↓</span>
+    </button>
+
     <div class="loader" id="loader" role="status">Cargando escena…</div>
 
     <!-- Escena 3D fija detrás de todo -->
@@ -59,9 +64,6 @@
                 <h1 id="hero-name"></h1>
                 <p class="hero-role" id="hero-role"></p>
                 <p class="hero-meta" id="hero-meta"></p>
-                <button type="button" class="scroll-cue" data-goto="about">
-                    <span>Desliza</span><span class="arrow" aria-hidden="true">↓</span>
-                </button>
             </section>
 
             <aside class="card about-card" id="about-card" aria-label="Sobre mí">
